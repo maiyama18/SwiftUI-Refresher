@@ -29,6 +29,9 @@ public struct Config {
     /// How long to hold the spinner before dismissing (a small delay is a nice UX if the refresh is VERY fast)
     public var holdTime: DispatchTimeInterval
 
+    /// Determines whether to trigger a refresh when the finger is released.
+    public var isRefreshingWhenReleasedFinger: Bool
+
     public init(
         refreshAt: CGFloat = 90,
         headerShimMaxHeight: CGFloat = 75,
@@ -36,7 +39,8 @@ public struct Config {
         defaultSpinnerOffScreenPoint: CGFloat = -50,
         defaultSpinnerPullClipPoint: CGFloat = 0.1,
         systemSpinnerOpacityClipPoint: CGFloat = 0.2,
-        holdTime: DispatchTimeInterval = .milliseconds(300)
+        holdTime: DispatchTimeInterval = .milliseconds(300),
+        isRefreshingWhenReleasedFinger: Bool = false
     ) {
         self.refreshAt = refreshAt
         self.defaultSpinnerSpinnerStopPoint = defaultSpinnerSpinnerStopPoint
@@ -45,6 +49,7 @@ public struct Config {
         self.defaultSpinnerPullClipPoint = defaultSpinnerPullClipPoint
         self.systemSpinnerOpacityClipPoint = systemSpinnerOpacityClipPoint
         self.holdTime = holdTime
+        self.isRefreshingWhenReleasedFinger = isRefreshingWhenReleasedFinger
     }
 }
 
@@ -255,7 +260,8 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
         
         isRefresherVisible = true
 
-        if distance >= config.refreshAt, !renderLock {
+        let canRefreshing = ((config.isRefreshingWhenReleasedFinger && !isFingerDown) || !config.isRefreshingWhenReleasedFinger)
+        if distance >= config.refreshAt, !renderLock, canRefreshing {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             renderLock = true
             canRefresh = false
