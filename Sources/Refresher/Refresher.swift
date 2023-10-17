@@ -60,7 +60,8 @@ public enum Style {
     /// Mimic the system refresh controller as close as possible
     case system
     case system2
-    
+    case system3
+
     /// Overlay the spinner onto the cotained view - good for static images
     case overlay
 }
@@ -129,7 +130,7 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
     
     private var refreshHeaderOffset: CGFloat {
         switch state.style {
-        case .default, .system:
+        case .default, .system, .system3:
             if case .refreshing = state.modeAnimated {
                 return config.headerShimMaxHeight * (1 - state.dragPosition)
             }
@@ -143,12 +144,31 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                 return config.headerShimMaxHeight
             default: break
             }
-        default: break
+        case .overlay:
+            break
         }
         
         return 0
     }
-    
+
+    private var system3SpinnerHeight: CGFloat? {
+        switch state.style {
+        case .system3:
+            switch state.modeAnimated {
+            case .pulling:
+                return max(0, distance)
+            case .refreshed where isRefreshedFingerDown:
+                return max(0, distance)
+            case .refreshing:
+                return max(distance, config.headerShimMaxHeight)
+            default: break
+            }
+        case .default, .system, .system2, .overlay:
+            break
+        }
+        return 0
+    }
+
     private var isTracking: Bool {
         guard let scrollView = uiScrollView else { return false }
         return scrollView.isTracking
@@ -195,7 +215,18 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                 .opacity(showRefreshControls ? 1 : 0)
         }
     }
-    
+
+    @ViewBuilder
+    private var system3StyleRefreshSpinner: some View {
+        if style == .system3 {
+            System3StyleRefreshSpinner(state: state,
+                                       refreshHoldPoint: config.headerShimMaxHeight / 2,
+                                       refreshView: refreshView($state),
+                                       headerInset: $headerInset)
+                .opacity(showRefreshControls ? 1 : 0)
+        }
+    }
+
     public var body: some View {
         // The ordering of views and operations here is very important - things break
         // in very strange ways between iOS 14 and iOS 15.
@@ -218,6 +249,10 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                     refreshSpinner
                 }
             }
+            .background(Group {
+                system3StyleRefreshSpinner
+                    .frame(height: system3SpinnerHeight)
+            }, alignment: .top)
             .introspect(.scrollView, on: .iOS(.v14, .v15, .v16, .v17)) { scrollView in
                 DispatchQueue.main.async {
                     uiScrollView = scrollView
@@ -233,7 +268,7 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
             }
         }
     }
-    
+
     private func offsetChanged(_ val: CGFloat) {
         isFingerDown = isTracking
         // For more precise scroll ending detection, round the floating-point errors in Float calculations.

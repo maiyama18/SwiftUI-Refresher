@@ -86,3 +86,27 @@ public struct System2StyleRefreshSpinner<RefreshView: View>: View {
         }
     }
 }
+
+public struct System3StyleRefreshSpinner<RefreshView: View>: View {
+    var state: RefresherState
+    var refreshHoldPoint: CGFloat
+    var refreshView: RefreshView
+
+    @Binding var headerInset: CGFloat
+
+    func offset(height: CGFloat) -> CGFloat {
+        return height - refreshHoldPoint
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            GeometryReader { geometry in
+                refreshView
+                    .frame(maxWidth: .infinity)
+                    .position(x: geometry.size.width / 2, y: offset(height: geometry.frame(in: .local).height))
+                    .animation(.easeInOut(duration: 0.2), value: state.modeAnimated == .refreshed)
+                    .clipped()
+            }
+        }
+    }
+}
