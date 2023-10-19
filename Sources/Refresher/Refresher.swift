@@ -28,13 +28,7 @@ public struct Config {
     
     /// How long to hold the spinner before dismissing (a small delay is a nice UX if the refresh is VERY fast)
     public var holdTime: DispatchTimeInterval
-    
-    /// How long to wait before allowing the next refresh
-    public var cooldown: DispatchTimeInterval
-    
-    /// How close to resting position the scrollview has to move in order to allow the next refresh (finger must also be released from screen)
-    public var resetPoint: CGFloat
-    
+
     public init(
         refreshAt: CGFloat = 90,
         headerShimMaxHeight: CGFloat = 75,
@@ -42,9 +36,7 @@ public struct Config {
         defaultSpinnerOffScreenPoint: CGFloat = -50,
         defaultSpinnerPullClipPoint: CGFloat = 0.1,
         systemSpinnerOpacityClipPoint: CGFloat = 0.2,
-        holdTime: DispatchTimeInterval = .milliseconds(300),
-        cooldown: DispatchTimeInterval = .milliseconds(500),
-        resetPoint: CGFloat = 5
+        holdTime: DispatchTimeInterval = .milliseconds(300)
     ) {
         self.refreshAt = refreshAt
         self.defaultSpinnerSpinnerStopPoint = defaultSpinnerSpinnerStopPoint
@@ -53,8 +45,6 @@ public struct Config {
         self.defaultSpinnerPullClipPoint = defaultSpinnerPullClipPoint
         self.systemSpinnerOpacityClipPoint = systemSpinnerOpacityClipPoint
         self.holdTime = holdTime
-        self.cooldown = cooldown
-        self.resetPoint = resetPoint
     }
 }
 
@@ -74,6 +64,7 @@ public enum RefreshMode {
     case notRefreshing
     case pulling
     case refreshing
+    case refreshed
 }
 
 public struct RefresherState {
@@ -97,19 +88,20 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
     let content: Content
     let refreshAction: RefreshAction
     var refreshView: (Binding<RefresherState>) -> RefreshView
-    
-    @State private var headerInset: CGFloat = 1000000 // Somewhere far off screen
+
     @State var state: RefresherState
     @State var distance: CGFloat = 0
-    @State var rawDistance: CGFloat = 0
-    @State var renderLock = false
-    private let style: Style
-    private let config: Config
 
+    @State private var headerInset: CGFloat = 1000000 // Somewhere far off screen
     @State private var uiScrollView: UIScrollView?
-    @State private var isRefresherVisible = true
+    @State private var isRefresherVisible = false
     @State private var isFingerDown = false
     @State private var canRefresh = true
+    @State private var renderLock = false
+    @State private var isRefreshedFingerDown = false
+
+    private let style: Style
+    private let config: Config
     
     init(
         axes: Axis.Set = .vertical,
@@ -208,7 +200,7 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                     }
                     systemStyleRefreshSpinner
                     system2StyleRefreshSpinner
-                    
+
                     // Content wrapper with refresh banner
                     VStack(spacing: 0) {
                         content
@@ -237,19 +229,24 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
     
     private func offsetChanged(_ val: CGFloat) {
         isFingerDown = isTracking
-        distance = val - headerInset
+        // For more precise scroll ending detection, round the floating-point errors in Float calculations.
+        let roundedDistance = (val - headerInset).rounded(.towardZero)
+        self.distance = val - headerInset
         state.dragPosition = normalize(from: 0, to: config.refreshAt, by: distance)
-        
-        // If the refresh state has settled, we are not touching the screen, and the offset has settled, we can signal the view to update itself.
-        if canRefresh, !isFingerDown, distance <= 0 {
+
+        // If the refresh state has settled, we are not touching the screen, and the offset has settled,
+        // we can signal the view to update itself.
+        if renderLock, canRefresh, !isFingerDown, roundedDistance <= 0 {
             renderLock = false
         }
-        
-        guard canRefresh else {
-            canRefresh = distance <= config.resetPoint && !isFingerDown && state.mode != .refreshing
-            return
+        if state.mode == .refreshed,
+           ((roundedDistance <= 0 && isRefreshedFingerDown) || (roundedDistance >= 0 && !isRefreshedFingerDown)) {
+            set(mode: .notRefreshing)
+            canRefresh = true
         }
-        guard distance > 0, showRefreshControls else {
+
+        guard canRefresh else { return }
+        guard roundedDistance > 0, showRefreshControls else {
             isRefresherVisible = false
             return
         }
@@ -266,13 +263,9 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                 // The ordering here is important - calling `set` on the main queue after `refreshAction` prevents
                 // strange animaton behaviors on some complex views
                 DispatchQueue.main.asyncAfter(deadline: .now() + config.holdTime) {
-                    set(mode: .notRefreshing)
+                    set(mode: .refreshed)
                     self.renderLock = false
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + config.cooldown) {
-                        self.canRefresh = !isFingerDown
-                        self.isRefresherVisible = false
-                    }
+                    self.isRefreshedFingerDown = isFingerDown
                 }
             }
 

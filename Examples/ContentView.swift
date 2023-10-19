@@ -171,7 +171,7 @@ public struct EmojiRefreshView: View {
             case .pulling:
                 Text("😯")
                     .rotationEffect(.degrees(360 * state.dragPosition))
-            case .refreshing:
+            case .refreshing, .refreshed:
                 Text("😂")
                     .rotationEffect(.degrees(self.isAnimating ? 360.0 : 0.0))
                         .onAppear {
