@@ -52,7 +52,7 @@ public struct SystemStyleRefreshSpinner<RefreshView: View>: View {
                     .frame(maxWidth: .infinity)
                     .position(x: geometry.size.width / 2, y: -position + refreshHoldPoint)
                     .opacity(state.modeAnimated == .refreshing ? 1 : normalize(from: opacityClipPoint, to: 1, by: state.dragPosition))
-                    .animation(.easeInOut(duration: 0.2), value: state.modeAnimated == .notRefreshing)
+                    .animation(.easeInOut(duration: 0.2), value: state.modeAnimated == .refreshed)
             }
         }
     }
@@ -67,9 +67,9 @@ public struct System2StyleRefreshSpinner<RefreshView: View>: View {
     
     func offset() -> CGFloat {
         switch state.modeAnimated {
-        case .refreshing, .notRefreshing:
+        case .notRefreshing, .refreshing, .refreshed:
             return refreshHoldPoint
-        default:
+        case .pulling:
             return lerp(from: 0, to: refreshHoldPoint, by: state.dragPosition)
         }
     }
@@ -81,7 +81,7 @@ public struct System2StyleRefreshSpinner<RefreshView: View>: View {
                     .frame(maxWidth: .infinity)
                     .position(x: geometry.size.width / 2, y: offset())
                     .opacity(state.modeAnimated == .refreshing ? 1 : normalize(from: opacityClipPoint, to: 1, by: state.dragPosition))
-                    .animation(.easeInOut(duration: 0.2), value: state.modeAnimated == .notRefreshing)
+                    .animation(.easeInOut(duration: 0.2), value: state.modeAnimated == .refreshed)
             }
         }
     }
