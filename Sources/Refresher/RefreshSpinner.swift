@@ -66,10 +66,11 @@ public struct System2StyleRefreshSpinner<RefreshView: View>: View {
     var refreshView: RefreshView
     
     func offset() -> CGFloat {
-        switch state.mode {
+        switch state.modeAnimated {
         case .refreshing, .notRefreshing:
             return refreshHoldPoint
-        default: return lerp(from: 0, to: refreshHoldPoint, by: state.dragPosition)
+        default:
+            return lerp(from: 0, to: refreshHoldPoint, by: state.dragPosition)
         }
     }
     

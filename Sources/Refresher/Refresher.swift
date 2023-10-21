@@ -132,6 +132,8 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
             switch state.modeAnimated {
             case .pulling:
                 return config.headerShimMaxHeight * (state.dragPosition)
+            case .refreshed where isRefreshedFingerDown:
+                return config.headerShimMaxHeight * (state.dragPosition)
             case .refreshing:
                 return config.headerShimMaxHeight
             default: break
@@ -263,9 +265,9 @@ public struct RefreshableScrollView<Content: View, RefreshView: View>: View {
                 // The ordering here is important - calling `set` on the main queue after `refreshAction` prevents
                 // strange animaton behaviors on some complex views
                 DispatchQueue.main.asyncAfter(deadline: .now() + config.holdTime) {
+                    self.isRefreshedFingerDown = isFingerDown
                     set(mode: .refreshed)
                     self.renderLock = false
-                    self.isRefreshedFingerDown = isFingerDown
                 }
             }
 
