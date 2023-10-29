@@ -66,7 +66,7 @@ public struct System2StyleRefreshSpinner<RefreshView: View>: View {
     var refreshView: RefreshView
     
     func offset() -> CGFloat {
-        switch state.modeAnimated {
+        switch state.mode {
         case .notRefreshing, .refreshing, .refreshed:
             return refreshHoldPoint
         case .pulling:
