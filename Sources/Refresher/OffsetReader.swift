@@ -6,12 +6,20 @@ struct OffsetReader: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            Spacer(minLength: 0)
-                .onChange(of: geometry.frame(in: .global)) { value in
-                    DispatchQueue.main.async {
-                        onChange(value.minY)
-                    }
+            Color.clear
+                .preference(key: OffsetPreferenceKey.self,
+                            value: geometry.frame(in: .global).minY)
+                .onPreferenceChange(OffsetPreferenceKey.self) { offset in
+                    onChange(offset)
                 }
         }
+    }
+}
+
+private struct OffsetPreferenceKey: PreferenceKey {
+    static var defaultValue = CGFloat.zero
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value += nextValue()
     }
 }
