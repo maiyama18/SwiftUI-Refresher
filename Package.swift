@@ -7,7 +7,9 @@ let package = Package(
     name: "Refresher",
     platforms: [
         .iOS(.v14),
-        .visionOS(.v1)
+        .macOS(.v11),
+        .tvOS(.v14),
+        .watchOS(.v7),
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
